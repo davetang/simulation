@@ -1,0 +1,6 @@
+*.bam
+*.sam
+*.bai
+*.gz
+*.txt
+*.vcf
