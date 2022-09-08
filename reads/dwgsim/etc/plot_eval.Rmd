@@ -1,0 +1,108 @@
+---
+title: "Plot dwgsim_eval output"
+author: "Dave Tang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: false
+    toc_float: false
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = FALSE)
+```
+
+Create column vector based [on the documentation](https://github.com/nh13/DWGSIM/blob/main/docs/04_Evaluating_Mappings.md).
+
+The `dwgsim_eval` tool outputs a table with the following columns:
+
+| Number | Column | Description |
+| ------ | ------ | ----------- |
+|    1   |  `thr` | The alignment threshold (see `-a`) |
+|    2   |  `mc`  | The number of reads mapped correctly that should be mapped at the threshold |
+|    3   |  `mi`  | The number of reads mapped incorrectly that should be mapped be mapped at the threshold |
+|    4   |  `mu`  | The number of reads unmapped that should be mapped be mapped at the threshold |
+|    5   |  `um`  | The number of reads mapped that should be unmapped be mapped at the threshold |
+|    6   |  `uu`  | The number of reads unmapped that should be unmapped be mapped at the threshold |
+|    7   |  `mc + mi + mu + um + uu` | The total number of reads that should be unmapped be mapped at the threshold |
+|    8   |  `mc'` | The number of reads mapped correctly that should be mapped at or greater than the threshold |
+|    9   |  `mi'` | The number of reads mapped incorrectly that should be mapped be mapped at or greater than the threshold |
+|   10   |  `mu'` | The number of reads unmapped that should be mapped be mapped at or greater than the threshold |
+|   11   |  `um'` | The number of reads mapped that should be unmapped be mapped at or greater than the threshold |
+|   12   |  `uu'` | The number of reads unmapped that should be unmapped be mapped at or greater than the threshold |
+|   13   |  `mc' + mi' + mu' + um' + uu'` | The total number of reads that should be unmapped be mapped at or greater than the threshold |
+|   14   |  `mc / (mc + mi + mu)` | Sensitivity at the threshold. I.e. the fraction of reads that should be mapped that are mapped correctly. |
+|   15   |  `mc / (mc + mi)` | Positive predictive value at the threshold. I.e. The fraction of mapped reads that are mapped correctly. |
+|   16   |  `um / (um + uu)` | False discovery rate at the threshold.  I.e. The fraction of random reads that are mapped. |
+|   17   |  `mc' / (mc' + mi' + mu')` | Sensitivity at or greater than the threshold. I.e. the fraction of reads that should be mapped that are mapped correctly. |
+|   18   |  `mc' / (mc' + mi')` | Positive predictive value at or greater than the threshold. I.e. The fraction of mapped reads that are mapped correctly. |
+|   19   |  `um' / (um' + uu')` | False discovery rate at or greater than the threshold.  I.e. The fraction of random reads that are mapped. |
+
+"At or greater than the threshold" tells us what our sensitivity, PPV, and FDR would be if we filtered based on that threshold.
+
+```{r col_spec}
+my_cols <- c(
+  'mq', 'mc', 'mi', 'mu', 'um', 'uu', 'mt',
+  'mct', 'mit', 'mut', 'umt', 'uut', 'mtt',
+  'recall', 'ppv', 'fdr',
+  'recallt', 'ppvt', 'fdrt'
+)
+
+my_col_types <- cols(
+  'i', 'i', 'i', 'i', 'i', 'i', 'i',
+  'i', 'i', 'i', 'i', 'i', 'i',
+  'd', 'd', 'd',
+  'd', 'd', 'd'
+)
+```
+
+Load evaluation result.
+
+```{r load_eval}
+metrics <- read_table("../test/hg38.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
+metrics
+```
+
+Accuracy without mapping quality zero.
+
+```{r accuracy}
+metrics %>%
+  summarise(total_read = sum(mt), accuracy = sum(mc)/sum(mt))
+```
+
+Plot percentage mapped correctly at different mapping qualities.
+
+```{r percent_correct}
+ggplot(metrics, aes(mq, mc/mt*100)) +
+  geom_point() +
+  geom_line() +
+  ylim(c(0, 100))
+```
+
+Sensitivity at or greater than the threshold, i.e. the fraction of reads that should be mapped that are mapped correctly.
+
+```{r recallt}
+ggplot(metrics, aes(mq, recallt)) +
+  geom_point() +
+  geom_line() +
+  ylim(c(0.5, 1))
+```
+
+Positive predictive value at or greater than the threshold, i.e. The fraction of mapped reads that are mapped correctly.
+
+```{r ppv}
+ggplot(metrics, aes(mq, ppvt)) +
+  geom_point() +
+  geom_line()
+```
+
+False discovery rate at or greater than the threshold.  I.e. The fraction of random reads that are mapped. |
+
+```{r fdrt}
+ggplot(metrics, aes(mq, fdrt)) +
+  geom_point() +
+  geom_line()
+```
