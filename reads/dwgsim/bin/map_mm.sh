@@ -22,8 +22,8 @@ fi
 # short genomic paired-end reads
 ${bin}/minimap2 -t ${threads} -ax sr ${fasta} ${read1} ${read2} |\
    ${bin}/samtools sort -@ ${threads} -O BAM |\
-   tee ${root}/test/${ref}.bam |\
-   ${bin}/samtools index - ${root}/test/${ref}.bam.bai
+   tee ${root}/test/${ref}.mm.bam |\
+   ${bin}/samtools index - ${root}/test/${ref}.mm.bam.bai
 
 >&2 echo Done
 exit 0

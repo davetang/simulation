@@ -1,3 +1,9 @@
 *.fna
 *.fa
 *.gz
+*.amb
+*.ann
+*.bwt
+*.pac
+*.sa
+*.nix
