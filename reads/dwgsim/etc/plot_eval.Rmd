@@ -62,21 +62,40 @@ my_col_types <- cols(
 Load evaluation result.
 
 ```{r load_eval}
-metrics <- read_table("../test/hg38.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
-metrics
+mm <- read_table("../test/hg38.mm.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
+bwa <- read_table("../test/hg38.bwa.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
+head(mm)
+```
+
+Join results.
+
+```{r combine}
+mm %>%
+  inner_join(y = bwa, suffix = c(".mm", ".bwa"), by = "mq") %>%
+  pivot_longer(cols = !mq, names_to = c(".value", "tool"), names_sep = "\\.") -> metrics
+```
+
+Accuracy.
+
+```{r accuracy}
+metrics %>%
+  group_by(tool) %>%
+  summarise(total_read = sum(mt), accuracy = sum(mc)/sum(mt))
 ```
 
 Accuracy without mapping quality zero.
 
-```{r accuracy}
+```{r accuracy_no_mapq_zero}
 metrics %>%
+  filter(mq > 0) %>%
+  group_by(tool) %>%
   summarise(total_read = sum(mt), accuracy = sum(mc)/sum(mt))
 ```
 
 Plot percentage mapped correctly at different mapping qualities.
 
 ```{r percent_correct}
-ggplot(metrics, aes(mq, mc/mt*100)) +
+ggplot(metrics, aes(mq, mc/mt*100, colour = tool)) +
   geom_point() +
   geom_line() +
   ylim(c(0, 100))
@@ -85,7 +104,7 @@ ggplot(metrics, aes(mq, mc/mt*100)) +
 Sensitivity at or greater than the threshold, i.e. the fraction of reads that should be mapped that are mapped correctly.
 
 ```{r recallt}
-ggplot(metrics, aes(mq, recallt)) +
+ggplot(metrics, aes(mq, recallt, colour = tool)) +
   geom_point() +
   geom_line() +
   ylim(c(0.5, 1))
@@ -94,7 +113,7 @@ ggplot(metrics, aes(mq, recallt)) +
 Positive predictive value at or greater than the threshold, i.e. The fraction of mapped reads that are mapped correctly.
 
 ```{r ppv}
-ggplot(metrics, aes(mq, ppvt)) +
+ggplot(metrics, aes(mq, ppvt, colour = tool)) +
   geom_point() +
   geom_line()
 ```
@@ -102,7 +121,7 @@ ggplot(metrics, aes(mq, ppvt)) +
 False discovery rate at or greater than the threshold.  I.e. The fraction of random reads that are mapped. |
 
 ```{r fdrt}
-ggplot(metrics, aes(mq, fdrt)) +
+ggplot(metrics, aes(mq, fdrt, colour = tool)) +
   geom_point() +
   geom_line()
 ```
