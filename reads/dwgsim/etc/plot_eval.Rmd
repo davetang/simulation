@@ -15,8 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(cache = FALSE)
 ```
 
-Create column vector based [on the documentation](https://github.com/nh13/DWGSIM/blob/main/docs/04_Evaluating_Mappings.md).
-
 The `dwgsim_eval` tool outputs a table with the following columns:
 
 | Number | Column | Description |
@@ -43,6 +41,8 @@ The `dwgsim_eval` tool outputs a table with the following columns:
 
 "At or greater than the threshold" tells us what our sensitivity, PPV, and FDR would be if we filtered based on that threshold.
 
+Create column vector based [on the documentation](https://github.com/nh13/DWGSIM/blob/main/docs/04_Evaluating_Mappings.md).
+
 ```{r col_spec}
 my_cols <- c(
   'mq', 'mc', 'mi', 'mu', 'um', 'uu', 'mt',
@@ -62,24 +62,34 @@ my_col_types <- cols(
 Load evaluation result.
 
 ```{r load_eval}
-mm <- read_table("../test/hg38.mm.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
-bwa <- read_table("../test/hg38.bwa.eval.txt.gz", comment = "#", col_names = my_cols, col_types = my_col_types)
-head(mm)
-```
+load_res <- function(my_set = "all", suffix = ".eval.txt.gz"){
+  for (tool in c('mm', 'bwa', 'dr')){
+    assign(
+      x = tool,
+      value = read_table(
+        paste0("../test/hg38.", tool, suffix),
+        comment = "#",
+        col_names = my_cols,
+        col_types = my_col_types
+      ) %>%
+        mutate(tool = tool) %>%
+        mutate(var = my_set) %>%
+        dplyr::select(mq, tool, var, everything())
+    )
+  }
+  rbind(mm, bwa, dr)
+}
 
-Join results.
-
-```{r combine}
-mm %>%
-  inner_join(y = bwa, suffix = c(".mm", ".bwa"), by = "mq") %>%
-  pivot_longer(cols = !mq, names_to = c(".value", "tool"), names_sep = "\\.") -> metrics
+my_tmp <- load_res()
+my_tmp_indels <- load_res("indels", ".indels.eval.txt.gz")
+metrics <- rbind(my_tmp, my_tmp_indels)
 ```
 
 Accuracy.
 
 ```{r accuracy}
 metrics %>%
-  group_by(tool) %>%
+  group_by(tool, var) %>%
   summarise(total_read = sum(mt), accuracy = sum(mc)/sum(mt))
 ```
 
@@ -88,40 +98,61 @@ Accuracy without mapping quality zero.
 ```{r accuracy_no_mapq_zero}
 metrics %>%
   filter(mq > 0) %>%
-  group_by(tool) %>%
+  group_by(tool, var) %>%
   summarise(total_read = sum(mt), accuracy = sum(mc)/sum(mt))
+```
+
+Plot mapped total at different mapping qualities.
+
+```{r mapped_incorrectly, fig.width=7, fig.height=5}
+ggplot(metrics, aes(mq, mt, fill = tool)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~var, scales = "free") +
+  NULL
+```
+
+Zoom in on lower mapping quality stats.
+
+```{r mapped_incorrectly, fig.width=7, fig.height=5}
+ggplot(metrics %>% filter(mq < 5), aes(mq, mi, fill = tool)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~var, scales = "free") +
+  NULL
 ```
 
 Plot percentage mapped correctly at different mapping qualities.
 
-```{r percent_correct}
+```{r percent_correct, fig.width=7, fig.height=5}
 ggplot(metrics, aes(mq, mc/mt*100, colour = tool)) +
   geom_point() +
   geom_line() +
-  ylim(c(0, 100))
+  ylim(c(0, 100)) +
+  facet_grid(~var)
 ```
 
 Sensitivity at or greater than the threshold, i.e. the fraction of reads that should be mapped that are mapped correctly.
 
-```{r recallt}
+```{r recallt, fig.width=7, fig.height=5}
 ggplot(metrics, aes(mq, recallt, colour = tool)) +
   geom_point() +
   geom_line() +
-  ylim(c(0.5, 1))
+  facet_grid(~var)
 ```
 
 Positive predictive value at or greater than the threshold, i.e. The fraction of mapped reads that are mapped correctly.
 
-```{r ppv}
+```{r ppv, fig.width=7, fig.height=5}
 ggplot(metrics, aes(mq, ppvt, colour = tool)) +
   geom_point() +
-  geom_line()
+  geom_line() +
+  facet_grid(~var)
 ```
 
 False discovery rate at or greater than the threshold.  I.e. The fraction of random reads that are mapped. |
 
-```{r fdrt}
+```{r fdrt, fig.width=7, fig.height=5}
 ggplot(metrics, aes(mq, fdrt, colour = tool)) +
   geom_point() +
-  geom_line()
+  geom_line() +
+  facet_grid(~var)
 ```
