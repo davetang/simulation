@@ -1,0 +1,84 @@
+---
+title: "Weighted averages"
+author: "Dave Tang"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: false
+    toc_float: false
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = FALSE)
+```
+
+Generate 10 random groups.
+
+```{r random_list}
+random_list <- function(ul){
+  mu <- sample(1:ul, 1)
+  sigma <- sample(1:ul, 1)
+  n <- sample(1:ul, 1)
+  rnorm(n, mu, sigma)
+}
+
+set.seed(1984)
+my_list <- map(rep(10000, 10), random_list)
+
+map_int(my_list, length)
+```
+
+Average (mean) of each group.
+
+```{r aog}
+map_dbl(my_list, mean)
+```
+
+Average of averages.
+
+```{r aoa}
+mean(map_dbl(my_list, mean))
+```
+
+Average of whole.
+
+```{r aow}
+mean(unlist(my_list))
+```
+
+Average of weighted averages.
+
+```{r aowa}
+sum(map_int(my_list, length) * map_dbl(my_list, mean)) / sum(map_int(my_list, length))
+```
+
+Repeat 10 times.
+
+```{r my_test}
+my_test <- function(x, verbose = FALSE){
+  set.seed(x)
+  my_list <- map(rep(10000, 10), random_list)
+  all <- mean(unlist(my_list))
+  aowa <- sum(map_int(my_list, length) * map_dbl(my_list, mean)) / sum(map_int(my_list, length))
+  if(verbose){
+    print(all - aowa)
+    print(all.equal(all, aowa))
+    print(identical(all, aowa))
+  }
+  all == aowa
+}
+
+map_lgl(1:10, my_test)
+```
+
+Small floating point difference.
+
+```{r dbl_diff}
+my_test(4, TRUE)
+```
+
+Average of weighted averages is sometimes different from the average of the whole due to floating point calculations.
+
