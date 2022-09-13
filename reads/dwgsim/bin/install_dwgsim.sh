@@ -33,7 +33,7 @@ if [[ -d ${d} ]]; then
       bye
    fi
 else
-   git clone --recursive git@github.com:nh13/DWGSIM.git
+   git clone --recursive https://github.com/nh13/DWGSIM.git
 fi
 
 rm -f dwgsim dwgsim_eval
