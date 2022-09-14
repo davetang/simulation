@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# written by Dave Tang
+#
 
 import sys
 import argparse
@@ -24,25 +27,44 @@ parser.add_argument(
     action = "store_true"
 )
 parser.add_argument(
-        "-p",
-        "--threads",
-        help = "number of threads (default = 1)",
-        choices = range(1,9),
-        default = 1,
-        type = int
+    "-u",
+    "--unmapped",
+    help = "include unmapped reads (default = False)",
+    default = False,
+    action = "store_true"
+)
+parser.add_argument(
+    "-p",
+    "--threads",
+    help = "number of threads (default = 4)",
+    choices = range(1,9),
+    default = 4,
+    type = int
 )
 args = parser.parse_args()
 
 if args.verbose:
     print("Verbose mode", file = sys.stderr)
-    print("Using {} threads".format(args.threads), file = sys.stderr)
     print("Input: {}".format(args.bam), file = sys.stderr)
 
-bam = pysam.AlignmentFile(args.bam, "rb")
+print("Using {} threads".format(args.threads), file = sys.stderr)
+
+def count_reads(bam):
+    b = pysam.AlignmentFile(bam, "rb", threads = args.threads)
+    print(f"Counting number of reads in {bam}", file = sys.stderr)
+    entries = b.count(until_eof = args.unmapped)
+    print(f"{bam} has {entries} reads", file = sys.stderr)
+    b.close()
+    return(entries)
+
+entries = count_reads(args.bam)
+one_pc = round(entries*0.01) - 1
+reads_processed = 0
+
+bam = pysam.AlignmentFile(args.bam, "rb", threads = args.threads)
 
 stats = [{}, {}, {}]
-
-for read in bam.fetch():
+for read in bam.fetch(until_eof = args.unmapped):
 
     if read.flag & 0x40:
         read_pair = 0
@@ -88,11 +110,17 @@ for read in bam.fetch():
         stats[read_pair][var] = defaultdict(dict)
         stats[read_pair][var][seq_error] = 1
 
+    reads_processed += 1
+    if reads_processed % one_pc == 0:
+        print(f'\rProcessing {args.bam}: {round(reads_processed / entries * 100)}% complete', end='', file = sys.stderr)
+print(file = sys.stderr)
+
 for idx, read_pair in enumerate(stats):
     for var, seq_error in sorted(read_pair.items()):
         for seq_error, value in sorted(seq_error.items()):
             print(f"read{idx+1}\t{var}\t{seq_error}\t{value}")
 
+print("Done", file = sys.stderr)
 bam.close()
 sys.exit()
 
