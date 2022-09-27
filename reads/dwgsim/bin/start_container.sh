@@ -10,10 +10,11 @@ fi
 cd $(dirname $0)/..
 
 docker run \
+   --name dwgsim \
    --rm \
    -it \
    -u $(id -u):$(id -g) \
    -v $(pwd):/work \
-   davetang/build:1.2.2 \
+   davetang/build:1.2.3 \
    /bin/bash
 
