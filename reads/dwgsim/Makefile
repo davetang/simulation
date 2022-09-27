@@ -3,7 +3,7 @@ PREFIX := hg38
 
 # settings for simulating reads
 # -N INT number of read pairs (-1 to disable) [-1]
-N := 100000
+N := 10000000
 
 # -1 INT length of the first read [70]
 # -2 INT length of the second read [70]
@@ -27,10 +27,12 @@ INDEL_EXT := 0.75
 
 # -I INT the minimum length indel [1]
 # -y FLOAT probability of a random DNA read [0.05]
+RAND_PROB = 0
+
 # -z INT random seed (-1 uses the current time) [-1]
 SEED := 1984
 
-OUTDIR := test/dwgsim_$(PREFIX)_$(N)_$(READ_LEN)_$(ERROR_RATE)_$(MUT_RATE)_$(INDEL_RATE)_$(INDEL_EXT)_$(SEED)
+OUTDIR := test/dwgsim_$(PREFIX)_$(N)_$(READ_LEN)_$(ERROR_RATE)_$(MUT_RATE)_$(INDEL_RATE)_$(INDEL_EXT)_$(RAND_PROB)_$(SEED)
 
 all: $(OUTDIR) tool data bam eval
 eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz
@@ -72,7 +74,7 @@ data/$(PREFIX).fa.sa: bin/bwa data/$(PREFIX).fa
 	$< index $(word 2,$^)
 
 $(READ1): bin/dwgsim data/$(PREFIX).fa
-	$< -N $(N) -1 $(READ_LEN) -2 $(READ_LEN) -e $(ERROR_RATE) -E $(ERROR_RATE) -r $(MUT_RATE) -R $(INDEL_RATE) -X $(INDEL_EXT) -z $(SEED) $(word 2,$^) $(OUTDIR)/$(PREFIX)
+	$< -N $(N) -1 $(READ_LEN) -2 $(READ_LEN) -e $(ERROR_RATE) -E $(ERROR_RATE) -r $(MUT_RATE) -R $(INDEL_RATE) -X $(INDEL_EXT) -y $(RAND_PROB) -z $(SEED) $(word 2,$^) $(OUTDIR)/$(PREFIX)
 
 $(OUTDIR)/$(PREFIX).mm.bam: bin/minimap2 $(READ1) bin/samtools
 	$< -t $(THREADS) -ax sr data/$(PREFIX).fa $(READ1) $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).mm.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).mm.bam.bai
