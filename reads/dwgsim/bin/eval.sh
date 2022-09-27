@@ -34,6 +34,13 @@ ${bin}/dwgsim_eval -p -i ${bam} |\
    tee ${outdir}/${base}.incorrect.indels.bam |\
    ${bin}/samtools index - ${outdir}/${base}.incorrect.indels.bam.bai
 
+${bin}/bam_subtract.py ${outdir}/${base}.correct.bam ${bam} ${outdir}/${base}.incorrect.bam
+${bin}/samtools index ${outdir}/${base}.correct.bam
+
+${bin}/bam_summary.py ${bam} > ${outdir}/${base}.tsv
+${bin}/bam_summary.py ${outdir}/${base}.correct.bam > ${outdir}/${base}.correct.tsv
+${bin}/bam_summary.py ${outdir}/${base}.incorrect.bam > ${outdir}/${base}.incorrect.tsv
+
 >&2 echo Done
 exit 0
 
