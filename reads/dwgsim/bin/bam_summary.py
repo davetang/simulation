@@ -115,6 +115,7 @@ for read in bam.fetch(until_eof = args.unmapped):
         print(f'\rProcessing {args.bam}: {round(reads_processed / entries * 100)}% complete', end='', file = sys.stderr)
 print(file = sys.stderr)
 
+print("\t".join(["read", "var", "seq_error", "value"]))
 for idx, read_pair in enumerate(stats):
     for var, seq_error in sorted(read_pair.items()):
         for seq_error, value in sorted(seq_error.items()):
