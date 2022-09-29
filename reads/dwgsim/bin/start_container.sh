@@ -15,6 +15,6 @@ docker run \
    -it \
    -u $(id -u):$(id -g) \
    -v $(pwd):/work \
-   davetang/build:1.2.3 \
+   davetang/build:1.2.5 \
    /bin/bash
 
