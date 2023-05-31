@@ -17,10 +17,10 @@ ERROR_RATE := 0
 # # default rate of 0.0010 will generate around 3 million mutations in a human
 # # reference genome
 # # -r FLOAT rate of mutations [0.0010]
-MUT_RATE := 0.002
+MUT_RATE := 0.005
 
 # -R FLOAT fraction of mutations that are indels [0.10]
-INDEL_RATE := 1
+INDEL_RATE := 0.50
 
 # -X FLOAT probability an indel is extended [0.30]
 INDEL_EXT := 0.75
@@ -34,11 +34,12 @@ SEED := 1984
 
 OUTDIR := test/dwgsim_$(PREFIX)_$(N)_$(READ_LEN)_$(ERROR_RATE)_$(MUT_RATE)_$(INDEL_RATE)_$(INDEL_EXT)_$(RAND_PROB)_$(SEED)
 
-all: $(OUTDIR) tool data bam eval
+all: $(OUTDIR) data tool index bam eval
 eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz
 bam: $(OUTDIR)/$(PREFIX).mm.bam $(OUTDIR)/$(PREFIX).bwa.bam $(OUTDIR)/$(PREFIX).dr.bam
+index: data/$(PREFIX)_dragmap/hash_table.cfg data/$(PREFIX).fa.sa
 tool: bin/samtools bin/minimap2 bin/dwgsim bin/bwa bin/dragen-os
-data: data/$(PREFIX).fa data/$(PREFIX)_dragmap data/$(PREFIX).fa.sa
+data: data/$(PREFIX).fa
 
 READ1 := $(OUTDIR)/$(PREFIX).bwa.read1.fastq.gz
 READ2 := $(OUTDIR)/$(PREFIX).bwa.read2.fastq.gz
@@ -66,9 +67,9 @@ bin/bwa: bin/install_bwa.sh
 bin/dragen-os: bin/install_dragmap.sh
 	$<
 
-data/$(PREFIX)_dragmap: bin/dragen-os data/$(PREFIX).fa
-	mkdir -p $@
-	$< --num-threads 8 --build-hash-table true --ht-reference $(word 2,$^) --output-directory $@
+data/$(PREFIX)_dragmap/hash_table.cfg: bin/dragen-os data/$(PREFIX).fa
+	mkdir -p $(dir $@)
+	$< --num-threads $(THREADS) --build-hash-table true --ht-reference $(word 2,$^) --output-directory $(dir $@)
 
 data/$(PREFIX).fa.sa: bin/bwa data/$(PREFIX).fa
 	$< index $(word 2,$^)
@@ -79,11 +80,11 @@ $(READ1): bin/dwgsim data/$(PREFIX).fa
 $(OUTDIR)/$(PREFIX).mm.bam: bin/minimap2 $(READ1) bin/samtools
 	$< -t $(THREADS) -ax sr data/$(PREFIX).fa $(READ1) $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).mm.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).mm.bam.bai
 
-$(OUTDIR)/$(PREFIX).bwa.bam: bin/bwa $(READ1) bin/samtools
+$(OUTDIR)/$(PREFIX).bwa.bam: bin/bwa data/$(PREFIX).fa.sa $(READ1) bin/samtools
 	$< mem -t $(THREADS) data/$(PREFIX).fa $(READ1) $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).bwa.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).bwa.bam.bai
 
-$(OUTDIR)/$(PREFIX).dr.bam: bin/dragen-os $(READ1) bin/samtools
-	$< --num-threads $(THREADS) -r data/$(PREFIX)_dragmap -1 $(READ1) -2 $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).dr.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).dr.bam.bai
+$(OUTDIR)/$(PREFIX).dr.bam: bin/dragen-os data/$(PREFIX)_dragmap/hash_table.cfg $(READ1) bin/samtools
+	$< --num-threads $(THREADS) -r $(dir $(word 2,$^)) -1 $(READ1) -2 $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).dr.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).dr.bam.bai
 
 $(OUTDIR)/$(PREFIX).mm.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).mm.bam
 	$^
@@ -95,4 +96,4 @@ $(OUTDIR)/$(PREFIX).dr.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).dr.bam
 	$^
 
 clean:
-	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/dwgsim* bin/DWGSIM bin/bwa*
+	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/dwgsim* bin/DWGSIM bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap

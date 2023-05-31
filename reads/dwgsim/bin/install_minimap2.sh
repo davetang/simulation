@@ -7,7 +7,7 @@ set -euo pipefail
 
 cd $(dirname $0)
 
-minimap2_ver=2.24
+minimap2_ver=2.26
 d=minimap2-${minimap2_ver}
 
 bye(){
@@ -41,4 +41,3 @@ cd ..
 ln -v -s ${d}/minimap2
 
 bye
-

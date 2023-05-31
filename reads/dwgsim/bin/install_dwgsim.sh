@@ -46,4 +46,3 @@ ln -v -s ${d}/dwgsim
 ln -v -s ${d}/dwgsim_eval
 
 bye
-

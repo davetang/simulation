@@ -5,11 +5,50 @@ tool](https://github.com/nh13/DWGSIM/blob/main/docs/03_Simulating_Reads.md)
 simulates reads from a FASTA file and can be used to evaluate read mapping and
 variant calling.
 
-To run the entire workflow, type make. This will download, index, simulate,
-map, and evaluate.
+To run the entire workflow, type `make`; use `-j 4` if you have extra cores.
+Using `-j 4` will run steps in the `Makefile` in parallel but note that some
+steps will use up to 8 cores (set in the `Makefile`).
 
-```bash
+Use the Docker image `davetang/build:1.2.6`, which uses a version of Ubuntu and
+libraries where all the tools can be compiled.
+
+```console
+docker run --rm davetang/build:1.2.6 cat /etc/os-release
+# NAME="Ubuntu"
+# VERSION="20.04.5 LTS (Focal Fossa)"
+# ID=ubuntu
+# ID_LIKE=debian
+# PRETTY_NAME="Ubuntu 20.04.5 LTS"
+# VERSION_ID="20.04"
+# HOME_URL="https://www.ubuntu.com/"
+# SUPPORT_URL="https://help.ubuntu.com/"
+# BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+# PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+# VERSION_CODENAME=focal
+# UBUNTU_CODENAME=focal
+```
+
+The script `start_docker.sh` will start a Docker container. Once inside the
+container, use `make`.
+
+```console
+./start_docker.sh
+
 make -j 4
+```
+
+Different parts of the workflow are separated using the following targets:
+
+* `data` - download data
+* `tool` - compile tools
+* `index` - generate the indexes
+* `bam` - generate the reads and perform the mapping
+* `eval` - evaluate the mapping
+
+For example, to just download the data.
+
+```console
+make data
 ```
 
 ## Tools
@@ -110,4 +149,3 @@ Options:
 	-P	STRING	a read prefix that was prepended to each read name [not using]
 	-h		print this help message
 ```
-

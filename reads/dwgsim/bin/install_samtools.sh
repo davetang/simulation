@@ -4,7 +4,7 @@ set -euo pipefail
 
 cd $(dirname $0)
 
-ver=1.16
+ver=1.17
 d=samtools-${ver}
 
 bye(){
@@ -38,4 +38,3 @@ cd ..
 ln -v -s ${d}/samtools
 
 bye
-

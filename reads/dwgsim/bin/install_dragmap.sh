@@ -34,9 +34,9 @@ fi
 
 rm -f ${binary}
 cd ${tool}-${ver}
-HAS_GTEST=0 make
+# https://github.com/Illumina/DRAGMAP/issues/22
+HAS_GTEST=0 make CFLAGS:=
 cd ..
 ln -v -s ${d}/build/release/${binary} .
 
 bye
-
