@@ -2,40 +2,23 @@
 
 set -euo pipefail
 
-cd $(dirname $0)
+script_dir=$(dirname $0)
+source ${script_dir}/utils.sh
 
-ver=0.7.17
-tool=bwa
-d=${tool}-${ver}
+check_args $# 1
+ver=$1
 
-bye(){
-   >&2 echo Done
-   exit 0
-}
+cd ${script_dir}
+d=bwa-${ver}
+check_dir ${d}
 
-if [[ -d ${d} ]]; then
-   >&2 echo ${d} already exists
-   if [[ -e ${d}/${tool} ]]; then
-      >&2 echo ${tool} already compiled
-      if [[ ! -L ${tool} ]]; then
-         >&2 echo Creating symlink to ${tool}
-         ln -v -s ${d}/${tool}
-      else
-         >&2 echo ${tool} symlink already exists
-      fi
-      bye
-   fi
-else
-   wget https://github.com/lh3/bwa/archive/refs/tags/v${ver}.tar.gz
-   tar xzf v${ver}.tar.gz
-   rm v${ver}.tar.gz
-fi
+wget https://github.com/lh3/bwa/archive/refs/tags/v${ver}.tar.gz
+tar xzf v${ver}.tar.gz
+rm v${ver}.tar.gz
 
-rm -f ${tool}
-cd ${tool}-${ver}
+cd bwa-${ver}
 make
 cd ..
-ln -v -s ${d}/${tool}
+ln -v -s -f ${d}/bwa
 
 bye
-

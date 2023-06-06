@@ -5,44 +5,23 @@
 
 set -euo pipefail
 
-cd $(dirname $0)
+script_dir=$(dirname $0)
+source ${script_dir}/utils.sh
 
-d=DWGSIM
+check_args $# 1
+ver=$1
 
-bye(){
-   >&2 echo Done
-   exit 0
-}
+cd ${script_dir}
+d=dwgsim-${ver}
+check_dir ${d}
 
-if [[ -d ${d} ]]; then
-   >&2 echo ${d} already exists
-   if [[ -e ${d}/dwgsim && ${d}/dwgsim_eval ]]; then
-      >&2 echo dwgsim and dwgsim_eval already compiled
-      if [[ ! -L dwgsim ]]; then
-         >&2 echo Creating symlink to dwgsim
-         ln -v -s ${d}/dwgsim
-      else
-         >&2 echo dwgsim symlink already exists
-      fi
-      if [[ ! -L dwgsim_eval ]]; then
-         >&2 echo Creating symlink to dwgsim_eval
-         ln -v -s ${d}/dwgsim_eval
-      else
-         >&2 echo dwgsim_eval symlink already exists
-      fi
-      bye
-   fi
-else
-   git clone --recursive https://github.com/nh13/DWGSIM.git
-fi
-
-rm -f dwgsim dwgsim_eval
-cd DWGSIM
+git clone --recursive https://github.com/nh13/DWGSIM.git dwgsim-${ver}
+cd dwgsim-${ver}
 make clean
 make
 make test
 cd ..
-ln -v -s ${d}/dwgsim
-ln -v -s ${d}/dwgsim_eval
+ln -v -s -f ${d}/dwgsim
+ln -v -s -f ${d}/dwgsim_eval
 
 bye

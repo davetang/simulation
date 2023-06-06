@@ -1,3 +1,5 @@
+include tool_versions
+
 THREADS := 8
 PREFIX := hg38
 
@@ -38,7 +40,7 @@ all: $(OUTDIR) data tool index bam eval
 eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz
 bam: $(OUTDIR)/$(PREFIX).mm.bam $(OUTDIR)/$(PREFIX).bwa.bam $(OUTDIR)/$(PREFIX).dr.bam
 index: data/$(PREFIX)_dragmap/hash_table.cfg data/$(PREFIX).fa.sa
-tool: bin/samtools bin/minimap2 bin/dwgsim bin/bwa bin/dragen-os
+tool: bin/samtools-$(samtools_version)/samtools bin/minimap2-$(minimap2_version)/minimap2 bin/dwgsim-$(dwgsim_version)/dwgsim bin/bwa-$(bwa_version)/bwa bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os
 data: data/$(PREFIX).fa
 
 READ1 := $(OUTDIR)/$(PREFIX).bwa.read1.fastq.gz
@@ -52,38 +54,38 @@ $(OUTDIR):
 data/$(PREFIX).fa: data/download.sh
 	$<
 
-bin/samtools: bin/install_samtools.sh
-	$<
+bin/samtools-$(samtools_version)/samtools: bin/install_samtools.sh
+	$< $(samtools_version)
 
-bin/minimap2: bin/install_minimap2.sh
-	$<
+bin/minimap2-$(minimap2_version)/minimap2: bin/install_minimap2.sh
+	$< $(minimap2_version)
 
-bin/dwgsim: bin/install_dwgsim.sh
-	$<
+bin/dwgsim-$(dwgsim_version)/dwgsim: bin/install_dwgsim.sh
+	$< $(dwgsim_version)
 
-bin/bwa: bin/install_bwa.sh
-	$<
+bin/bwa-$(bwa_version)/bwa: bin/install_bwa.sh
+	$< $(bwa_version)
 
-bin/dragen-os: bin/install_dragmap.sh
-	$<
+bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os: bin/install_dragmap.sh
+	$< $(dragmap_version)
 
-data/$(PREFIX)_dragmap/hash_table.cfg: bin/dragen-os data/$(PREFIX).fa
+data/$(PREFIX)_dragmap/hash_table.cfg: bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os data/$(PREFIX).fa
 	mkdir -p $(dir $@)
 	$< --num-threads $(THREADS) --build-hash-table true --ht-reference $(word 2,$^) --output-directory $(dir $@)
 
-data/$(PREFIX).fa.sa: bin/bwa data/$(PREFIX).fa
+data/$(PREFIX).fa.sa: bin/bwa-$(bwa_version)/bwa data/$(PREFIX).fa
 	$< index $(word 2,$^)
 
-$(READ1): bin/dwgsim data/$(PREFIX).fa
+$(READ1): bin/dwgsim-$(dwgsim_version)/dwgsim data/$(PREFIX).fa
 	$< -N $(N) -1 $(READ_LEN) -2 $(READ_LEN) -e $(ERROR_RATE) -E $(ERROR_RATE) -r $(MUT_RATE) -R $(INDEL_RATE) -X $(INDEL_EXT) -y $(RAND_PROB) -z $(SEED) $(word 2,$^) $(OUTDIR)/$(PREFIX)
 
-$(OUTDIR)/$(PREFIX).mm.bam: bin/minimap2 $(READ1) bin/samtools
+$(OUTDIR)/$(PREFIX).mm.bam: bin/minimap2-$(minimap2_version)/minimap2 $(READ1) bin/samtools-$(samtools_version)/samtools
 	$< -t $(THREADS) -ax sr data/$(PREFIX).fa $(READ1) $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).mm.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).mm.bam.bai
 
-$(OUTDIR)/$(PREFIX).bwa.bam: bin/bwa data/$(PREFIX).fa.sa $(READ1) bin/samtools
+$(OUTDIR)/$(PREFIX).bwa.bam: bin/bwa-$(bwa_version)/bwa data/$(PREFIX).fa.sa $(READ1) bin/samtools-$(samtools_version)/samtools
 	$< mem -t $(THREADS) data/$(PREFIX).fa $(READ1) $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).bwa.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).bwa.bam.bai
 
-$(OUTDIR)/$(PREFIX).dr.bam: bin/dragen-os data/$(PREFIX)_dragmap/hash_table.cfg $(READ1) bin/samtools
+$(OUTDIR)/$(PREFIX).dr.bam: bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os data/$(PREFIX)_dragmap/hash_table.cfg $(READ1) bin/samtools-$(samtools_version)/samtools
 	$< --num-threads $(THREADS) -r $(dir $(word 2,$^)) -1 $(READ1) -2 $(READ2) | bin/samtools sort -@ $(THREADS) -O BAM | tee $(OUTDIR)/$(PREFIX).dr.bam | bin/samtools index - $(OUTDIR)/$(PREFIX).dr.bam.bai
 
 $(OUTDIR)/$(PREFIX).mm.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).mm.bam
@@ -96,4 +98,4 @@ $(OUTDIR)/$(PREFIX).dr.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).dr.bam
 	$^
 
 clean:
-	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/dwgsim* bin/DWGSIM bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap
+	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/dwgsim* bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap

@@ -5,39 +5,24 @@
 
 set -euo pipefail
 
-cd $(dirname $0)
+script_dir=$(dirname $0)
+source ${script_dir}/utils.sh
 
-minimap2_ver=2.26
-d=minimap2-${minimap2_ver}
+check_args $# 1
+ver=$1
 
-bye(){
-   >&2 echo Done
-   exit 0
-}
+cd ${script_dir}
+d=minimap2-${ver}
+check_dir ${d}
 
-if [[ -d ${d} ]]; then
-   >&2 echo ${d} already exists
-   if [[ -e ${d}/minimap2 ]]; then
-      >&2 echo minimap2 already compiled
-      if [[ ! -L minimap2 ]]; then
-         >&2 echo Creating symlink to minimap2
-         ln -v -s ${d}/dwgsim
-      else
-         >&2 echo minimap2 symlink already exists
-      fi
-      bye
-   fi
-else
-   wget https://github.com/lh3/minimap2/archive/refs/tags/v${minimap2_ver}.tar.gz
-   tar xzf v${minimap2_ver}.tar.gz
-   rm v${minimap2_ver}.tar.gz
-fi
+wget https://github.com/lh3/minimap2/archive/refs/tags/v${ver}.tar.gz
+tar xzf v${ver}.tar.gz
+rm v${ver}.tar.gz
 
-rm -f minimap2
-cd minimap2-${minimap2_ver}
+cd minimap2-${ver}
 make clean
 make
 cd ..
-ln -v -s ${d}/minimap2
+ln -v -s -f ${d}/minimap2
 
 bye
