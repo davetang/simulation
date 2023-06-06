@@ -1,4 +1,5 @@
 include tool_versions
+.PHONY: all clean data tool index vcf bam eval
 
 THREADS := 8
 PREFIX := hg38
@@ -36,17 +37,16 @@ SEED := 1984
 
 OUTDIR := test/dwgsim_$(PREFIX)_$(N)_$(READ_LEN)_$(ERROR_RATE)_$(MUT_RATE)_$(INDEL_RATE)_$(INDEL_EXT)_$(RAND_PROB)_$(SEED)
 
-all: $(OUTDIR) data tool index bam eval
+all: $(OUTDIR) data tool index vcf bam eval
 eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz
 bam: $(OUTDIR)/$(PREFIX).mm.bam $(OUTDIR)/$(PREFIX).bwa.bam $(OUTDIR)/$(PREFIX).dr.bam
+vcf: $(OUTDIR)/$(PREFIX).mutations.vcf.gz.csi
 index: data/$(PREFIX)_dragmap/hash_table.cfg data/$(PREFIX).fa.sa
-tool: bin/samtools-$(samtools_version)/samtools bin/minimap2-$(minimap2_version)/minimap2 bin/dwgsim-$(dwgsim_version)/dwgsim bin/bwa-$(bwa_version)/bwa bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os
+tool: bin/samtools-$(samtools_version)/samtools bin/minimap2-$(minimap2_version)/minimap2 bin/dwgsim-$(dwgsim_version)/dwgsim bin/bwa-$(bwa_version)/bwa bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os bin/bcftools-$(bcftools_version)/bcftools
 data: data/$(PREFIX).fa
 
 READ1 := $(OUTDIR)/$(PREFIX).bwa.read1.fastq.gz
 READ2 := $(OUTDIR)/$(PREFIX).bwa.read2.fastq.gz
-
-.PHONY: all clean
 
 $(OUTDIR):
 	mkdir $@
@@ -56,6 +56,9 @@ data/$(PREFIX).fa: data/download.sh
 
 bin/samtools-$(samtools_version)/samtools: bin/install_samtools.sh
 	$< $(samtools_version)
+
+bin/bcftools-$(bcftools_version)/bcftools: bin/install_bcftools.sh
+	$< $(bcftools_version)
 
 bin/minimap2-$(minimap2_version)/minimap2: bin/install_minimap2.sh
 	$< $(minimap2_version)
@@ -97,5 +100,11 @@ $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).bwa.bam
 $(OUTDIR)/$(PREFIX).dr.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).dr.bam
 	$^
 
+$(OUTDIR)/$(PREFIX).mutations.vcf.gz: bin/bcftools-$(bcftools_version)/bcftools $(READ1)
+	$< view -O z $(OUTDIR)/$(PREFIX).mutations.vcf > $(OUTDIR)/$(PREFIX).mutations.vcf.gz
+
+$(OUTDIR)/$(PREFIX).mutations.vcf.gz.csi: bin/bcftools-$(bcftools_version)/bcftools $(OUTDIR)/$(PREFIX).mutations.vcf.gz
+	$< index $(word 2,$^)
+
 clean:
-	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/dwgsim* bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap
+	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/bcftools* bin/dwgsim* bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap

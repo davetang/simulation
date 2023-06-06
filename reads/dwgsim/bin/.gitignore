@@ -2,6 +2,7 @@ DWGSIM
 dwgsim*
 minimap2*
 samtools*
+bcftools*
 bwa*
 DRAGMAP*
 dragen-os
