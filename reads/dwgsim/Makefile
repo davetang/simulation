@@ -6,7 +6,7 @@ PREFIX := hg38
 
 # settings for simulating reads
 # -N INT number of read pairs (-1 to disable) [-1]
-N := 10000000
+N := 200000000
 
 # -1 INT length of the first read [70]
 # -2 INT length of the second read [70]
@@ -38,11 +38,11 @@ SEED := 1984
 OUTDIR := test/dwgsim_$(PREFIX)_$(N)_$(READ_LEN)_$(ERROR_RATE)_$(MUT_RATE)_$(INDEL_RATE)_$(INDEL_EXT)_$(RAND_PROB)_$(SEED)
 
 all: $(OUTDIR) data tool index vcf bam eval
-eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz
+eval: $(OUTDIR)/$(PREFIX).mm.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz $(OUTDIR)/$(PREFIX).dr.eval.txt.gz $(OUTDIR)/$(PREFIX).bwa.bamreadcount.tsv
 bam: $(OUTDIR)/$(PREFIX).mm.bam $(OUTDIR)/$(PREFIX).bwa.bam $(OUTDIR)/$(PREFIX).dr.bam
 vcf: $(OUTDIR)/$(PREFIX).mutations.vcf.gz.csi
 index: data/$(PREFIX)_dragmap/hash_table.cfg data/$(PREFIX).fa.sa
-tool: bin/samtools-$(samtools_version)/samtools bin/minimap2-$(minimap2_version)/minimap2 bin/dwgsim-$(dwgsim_version)/dwgsim bin/bwa-$(bwa_version)/bwa bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os bin/bcftools-$(bcftools_version)/bcftools
+tool: bin/samtools-$(samtools_version)/samtools bin/minimap2-$(minimap2_version)/minimap2 bin/dwgsim-$(dwgsim_version)/dwgsim bin/bwa-$(bwa_version)/bwa bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os bin/bcftools-$(bcftools_version)/bcftools bin/bam-readcount-$(bamreadcount_version)/build/bin/bam-readcount
 data: data/$(PREFIX).fa
 
 READ1 := $(OUTDIR)/$(PREFIX).bwa.read1.fastq.gz
@@ -72,6 +72,9 @@ bin/bwa-$(bwa_version)/bwa: bin/install_bwa.sh
 bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os: bin/install_dragmap.sh
 	$< $(dragmap_version)
 
+bin/bam-readcount-$(bamreadcount_version)/build/bin/bam-readcount: bin/install_bamreadcount.sh
+	$< $(bamreadcount_version)
+
 data/$(PREFIX)_dragmap/hash_table.cfg: bin/DRAGMAP-$(dragmap_version)/build/release/dragen-os data/$(PREFIX).fa
 	mkdir -p $(dir $@)
 	$< --num-threads $(THREADS) --build-hash-table true --ht-reference $(word 2,$^) --output-directory $(dir $@)
@@ -100,6 +103,9 @@ $(OUTDIR)/$(PREFIX).bwa.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).bwa.bam
 $(OUTDIR)/$(PREFIX).dr.eval.txt.gz: bin/eval.sh $(OUTDIR)/$(PREFIX).dr.bam
 	$^
 
+$(OUTDIR)/$(PREFIX).bwa.bamreadcount.tsv: bin/bam-readcount-$(bamreadcount_version)/build/bin/bam-readcount $(OUTDIR)/$(PREFIX).bwa.bam
+	$< -w 0 -f data/$(PREFIX).fa -l data/site_list $(word 2,$^) > $@
+
 $(OUTDIR)/$(PREFIX).mutations.vcf.gz: bin/bcftools-$(bcftools_version)/bcftools $(READ1)
 	$< view -O z $(OUTDIR)/$(PREFIX).mutations.vcf > $(OUTDIR)/$(PREFIX).mutations.vcf.gz
 
@@ -107,4 +113,4 @@ $(OUTDIR)/$(PREFIX).mutations.vcf.gz.csi: bin/bcftools-$(bcftools_version)/bcfto
 	$< index $(word 2,$^)
 
 clean:
-	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/bcftools* bin/dwgsim* bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap
+	rm -rf $(OUTDIR)/$(PREFIX).* bin/minimap2* bin/samtools* bin/bcftools* bin/dwgsim* bin/bwa* bin/dragen-os bin/DRAGMAP-* data/$(PREFIX)_dragmap bin/bam-readcount*

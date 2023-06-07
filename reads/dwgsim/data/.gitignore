@@ -7,4 +7,5 @@
 *.pac
 *.sa
 *.nix
+*.fai
 hg38_dragmap
